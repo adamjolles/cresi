@@ -6,7 +6,7 @@ WORKDIR /opt/cresi
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        python3 python3-pip git wget unzip libgl1 libgdal-dev gdal-bin && \
+        python3 python3-pip git wget unzip libgl1 libgdal-dev gdal-bin build-essential python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
