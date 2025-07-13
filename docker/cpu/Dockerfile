@@ -1,5 +1,5 @@
 # Lightweight CPU-only Dockerfile
-# Build with: docker build -t cresi_cpu docker/cpu
+# Build with: docker build -f docker/cpu/Dockerfile -t cresi_cpu .
 
 FROM ubuntu:22.04
 WORKDIR /opt/cresi
