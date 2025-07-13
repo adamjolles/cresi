@@ -5,8 +5,11 @@ FROM ubuntu:22.04
 WORKDIR /opt/cresi
 
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && \
+    apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        python3 python3-pip git wget unzip libgl1 libgdal-dev gdal-bin build-essential python3-dev && \
+        python3 python3-pip git wget unzip libgl1 gdal-bin libgdal-dev build-essential python3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
