@@ -30,7 +30,16 @@ ____
 	
 3. Create docker container (all commands should be run in this container)
 
-		nvidia-docker run -it --rm -ti --ipc=host --name cresi_image cresi
+                nvidia-docker run -it --rm -ti --ipc=host --name cresi_image cresi
+
+Alternatively, you can run CRESI outside of Docker by installing the Python
+dependencies directly:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 	
 
 ____
