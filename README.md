@@ -116,3 +116,18 @@ ____
 Outputs will look something like the image below:
 
 ![Alt text](/results/images/vegas_speed.jpg?raw=true "Header")
+
+## Running on Apple Silicon
+
+To run the pre-trained model on macOS with Apple Silicon GPUs, a simplified
+Dockerfile is provided at `docker/mps/Dockerfile`. Build and run the image with:
+
+```bash
+docker build -f docker/mps/Dockerfile -t cresi_mps .
+docker run -it cresi_mps
+```
+
+The container installs PyTorch with CPU support. When executed on macOS the code
+will automatically use the MPS backend if available. The pre-trained weights
+from `results/weights/aws_weights/fold0_best.pth.zip` are extracted during the
+image build.

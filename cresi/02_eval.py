@@ -24,20 +24,15 @@ import argparse
 # https://github.com/pytorch/pytorch/issues/1668
 #device = torch.device('cuda:0' if torch.cuda.is_avaliable() else 'cpu')
 if torch.cuda.is_available():
-    print("Executing inference with GPUs")
-    # pytorch 0.3
-    # torch.cuda.device(0)
-    ## pytorch 0.4
-    #device = "cuda"
-        #https://discuss.pytorch.org/t/cuda-freezes-the-python/9651/5
-    # torch.cuda.empty_cache()
-    torch.randn(10).cuda()
-    
+    device = torch.device("cuda")
+    print("Executing inference with CUDA")
+    torch.randn(10).to(device)
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    device = torch.device("mps")
+    print("Executing inference with Apple MPS")
 else:
+    device = torch.device("cpu")
     print("Executing inference on the CPU")
-    # pytorch 0.3
-    torch.cuda.device(-1)
-    ## pytorch 0.4
     #device = "cpu"
 
 
@@ -78,12 +73,12 @@ def eval_cresi(config, paths, fn_mapping, image_suffix, save_dir, test=True,
                                   image_suffix=image_suffix, num_channels=num_channels)
         
         folds = [([], list(range(len(ds)))) for i in range(nfolds)]
-        if torch.cuda.is_available():
+        if device.type == 'cuda':
             num_workers = 0 if os.name == 'nt' else 2
-        else:            
+        else:
             # get connection error if more than 0 workers and cpu:
             #   https://discuss.pytorch.org/t/data-loader-crashes-during-training-something-to-do-with-multiprocessing-in-docker/4379/5
-            num_workers = 0            
+            num_workers = 0
             
         print("num_workers:", num_workers)
         keval = FullImageEvaluator(config, ds, save_dir=save_dir, test=test, 
