@@ -1,0 +1,16 @@
+numpy
+pandas
+scikit-image
+shapely
+networkx
+rasterio
+geopandas
+osmnx
+pillow
+opencv-python-headless
+matplotlib
+statsmodels
+tqdm
+utm
+numba
+torchsummary

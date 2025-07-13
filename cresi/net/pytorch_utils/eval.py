@@ -4,9 +4,17 @@ import cv2
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 import numpy as np
+# device setup
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+# Select runtime device (CUDA, MPS or CPU)
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cpu")
 # torch.backends.cudnn.benchmark = True
 import tqdm
 from multiprocessing.pool import Pool
@@ -37,20 +45,20 @@ class flip:
 
 def flip_tensor_lr(batch):
     columns = batch.data.size()[-1]
-    if torch.cuda.is_available():
-        index = torch.autograd.Variable(torch.LongTensor(list(reversed(range(columns)))).cuda())
-    else:
-        index = torch.autograd.Variable(torch.LongTensor(list(reversed(range(columns)))))
+    idx = torch.LongTensor(list(reversed(range(columns))))
+    if DEVICE.type != 'cpu':
+        idx = idx.to(DEVICE)
+    index = torch.autograd.Variable(idx)
         
     return batch.index_select(3, index)
 
 
 def flip_tensor_ud(batch):
     rows = batch.data.size()[-2]
-    if torch.cuda.is_available():
-        index = torch.autograd.Variable(torch.LongTensor(list(reversed(range(rows)))).cuda())
-    else:
-        index = torch.autograd.Variable(torch.LongTensor(list(reversed(range(rows)))))
+    idx = torch.LongTensor(list(reversed(range(rows))))
+    if DEVICE.type != 'cpu':
+        idx = idx.to(DEVICE)
+    index = torch.autograd.Variable(idx)
 
     return batch.index_select(2, index)
 
@@ -65,7 +73,7 @@ def predict(model, batch, flips=flip.FLIP_NONE, verbose=False):
         print("  eval.py - predict() - executing...")
 
     #print ("run eval.predict()...")
-    # predict with tta on gpu
+    batch = torch.autograd.Variable(batch.to(DEVICE))
     pred1 = F.sigmoid(model(batch))
     # with torch.no_grad():
     #    pred1 = F.sigmoid(model(batch))
@@ -94,24 +102,16 @@ def read_model(path_model_weights, fold, n_gpus=4):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', SourceChangeWarning)
         
-        if torch.cuda.is_available():
-            print ("load model with cuda")
-            model = torch.load(os.path.join(path_model_weights, 'fold{}_best.pth'.format(fold))).cuda()
-            #model = torch.load(os.path.join(config.path_model_weights, 'fold{}_best.pth'.format(fold)))
-            # multple gpus
+        model_path = os.path.join(path_model_weights, f'fold{fold}_best.pth')
+        print("Loading model from", model_path)
+        model = torch.load(model_path, map_location=DEVICE)
+        if DEVICE.type == 'cuda' and n_gpus > 1:
             try:
-                model = nn.DataParallel(model, device_ids=[0,1,2,3], dim=0)
+                model = nn.DataParallel(model, device_ids=list(range(n_gpus)), dim=0)
                 print("multi-gpu")
-            except:
+            except Exception:
                 pass
-        
-        else:
-            print("load model with cpu")
-            # torch 0.3
-            model = torch.load(os.path.join(path_model_weights, 'fold{}_best.pth'.format(fold)),  map_location=lambda storage, loc: storage)
-            #model = torch.load(os.path.join(path_model_weights, 'fold{}_best.pth'.format(fold)),  map_location=lambda storage, location: 'cpu')
-            ## torch 0.4
-            #model = torch.load(os.path.join(path_model_weights, 'fold{}_best.pth'.format(fold)), map_location='cpu')
+        model = model.to(DEVICE)
     
         #model = torch.load(os.path.join(config.results_dir, 'weights', config.folder, 'fold{}_best.pth'.format(fold)))
         model.eval()
@@ -162,7 +162,7 @@ class Evaluator:
         prefix = ('fold' + str(fold) + "_") if (self.test and fold is not None) else ""
         print ("prefix:", prefix)
         print ("Creating datasets within pytorch_utils/eval.py()...")
-        if not torch.cuda.is_available():
+        if DEVICE.type != 'cuda':
             self.num_workers = n_threads_cpu
 
         val_dataset = SequentialDataset(self.ds, val_indexes, 
@@ -185,9 +185,9 @@ class Evaluator:
         MOD = model
         
         pbar = tqdm.tqdm(val_dl, total=len(val_dl))
-        if torch.cuda.is_available():
+        if DEVICE.type != 'cpu':
             for data in pbar:
-                samples = torch.autograd.Variable(data['image'], volatile=True).cuda()                    
+                samples = torch.autograd.Variable(data['image']).to(DEVICE)
                 predicted = predict(model, samples, flips=self.flips)
                 if verbose:
                     print("  eval.py -  - Evaluator - predict() - len samples:", len(samples))
@@ -197,7 +197,7 @@ class Evaluator:
                 self.process_batch(predicted, model, data, prefix=prefix)
         else:
             for data in pbar:
-                samples = torch.autograd.Variable(data['image'], volatile=True)
+                samples = torch.autograd.Variable(data['image'])
                 predicted = predict(model, samples, flips=self.flips)
                 if verbose:
                     print("  eval.py -  - Evaluator - predict() - len samples:", len(samples))
