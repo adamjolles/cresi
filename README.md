@@ -24,13 +24,19 @@ ____
 
 1. Download this repository
 
-2. Build docker image
+2. Build docker image (choose GPU or CPU)
 
-		nvidia-docker build -t cresi /path_to_cresi/docker/[cpu, gpu]
+                # GPU
+                docker build -t cresi_gpu docker/gpu
+                # CPU
+                docker build -t cresi_cpu docker/cpu
 	
 3. Create docker container (all commands should be run in this container)
 
-                nvidia-docker run -it --rm -ti --ipc=host --name cresi_image cresi
+                # GPU
+                nvidia-docker run -it --rm --ipc=host --name cresi_gpu cresi_gpu
+                # CPU
+                docker run -it --rm --ipc=host --name cresi_cpu cresi_cpu
 
 Alternatively, you can run CRESI outside of Docker by installing the Python
 dependencies directly:
@@ -45,11 +51,26 @@ pip install -r requirements.txt
 ____
 ### Prep ###
 
-1. Prepare train/test data, e.g.:
+1. Prepare train/test data. The `speed_masks.py` script converts imagery and
+   GeoJSON labels into training masks. Replace the example paths below with the
+   locations of your data.
 
-		python /path_to_cresi/cresi/data_prep/speed_masks.py
-	
-2. Edit .json file to select desired variables and point to appropriate directories
+                python cresi/data_prep/speed_masks.py \
+                    --geojson_dir /path/to/geojsons \
+                    --image_dir /path/to/images \
+                    --output_conversion_csv_contin /path/to/conversion.csv \
+                    --output_mask_dir_contin /path/to/masks
+
+2. Edit the `.json` configuration file to select desired variables and point to
+   the appropriate directories.
+
+3. Unzip the provided pre-trained weights so the configuration files can locate
+   them:
+
+                unzip results/weights/aws_weights/fold0_best.pth.zip -d results/aws_weights/weights
+
+   After extraction the weights will be available at
+   `results/aws_weights/weights/fold0_best.pth`.
 
 
 ____
@@ -116,6 +137,17 @@ ____
 Outputs will look something like the image below:
 
 ![Alt text](/results/images/vegas_speed.jpg?raw=true "Header")
+
+## Running with GPU or CPU
+
+Execute the model inside the Docker container that matches your hardware.
+
+```bash
+# GPU
+./test.sh configs/sn5_baseline.json
+# CPU
+./test.sh configs/dar_tutorial_cpu.json
+```
 
 ## Running on Apple Silicon
 
