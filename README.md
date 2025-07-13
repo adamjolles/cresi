@@ -29,7 +29,7 @@ ____
                 # GPU
                 docker build -t cresi_gpu docker/gpu
                 # CPU
-                docker build -t cresi_cpu docker/cpu
+                docker build -f docker/cpu/Dockerfile -t cresi_cpu .
 	
 3. Create docker container (all commands should be run in this container)
 
